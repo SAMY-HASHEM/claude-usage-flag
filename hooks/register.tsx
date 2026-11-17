@@ -3,10 +3,8 @@ import type { EngineInterface, Register, SessionRateLimit } from 'claude-code'
 
 import type { Limit } from '../types'
 
-// The usage flag: above the prompt, how much of the 5-hour session and of the week this account has used, when each
-// window ends and how long until then, and a button that opens the login to change account. The same in short in
-// the status line. Each Claude session shows its own account's windows, so two sessions with two accounts each
-// show their own flag.
+// The usage flag, for Claude Code in the terminal: above the prompt, how much of the 5-hour session and of the week
+// this account has used, when each window ends and how long until then. The same in short in the status line.
 
 const limits = atom({ plugin: 'usage-flag', key: 'limits' } as const, [] as Limit[])
 const now = atom({ plugin: 'usage-flag', key: 'now' } as const, 0)
@@ -34,10 +32,12 @@ function left(iso: string, nowMs: number): string {
   return `${minutes} min`
 }
 
+const rank = (kind: string) => (ORDER.indexOf(kind) + 99) % 99 // unknown kinds last
+
 const sorted = (list: readonly SessionRateLimit[] | Limit[]): Limit[] =>
   [...list]
     .map(l => ({ kind: l.kind, percentUsed: l.percentUsed, resetsAt: l.resetsAt }))
-    .sort((a, b) => (ORDER.indexOf(a.kind) + 99) % 99 - (ORDER.indexOf(b.kind) + 99) % 99)
+    .sort((a, b) => rank(a.kind) - rank(b.kind))
 
 /** Keeps the windows, writes the status line, and warns once per window past 90 %. */
 async function keep($: EngineInterface, list: readonly SessionRateLimit[]) {
@@ -78,17 +78,8 @@ export const register: Register = on => {
     const windows = await read($, limits)
     if (!windows.length) return next(e) // off a subscription, or before the first answer: nothing to show
     const clock = (await read($, now)) || (await $.clock.now())
-    const { Box, Button, Text } = $.ui.resolve(e)
+    const { Box, Text } = $.ui.resolve(e)
     const worst = Math.max(...windows.map(w => w.percentUsed))
-
-    const switchAccount = async () => {
-      const names = (await $.command.list()).map(c => c.name)
-      if (!names.includes('login')) {
-        $.ui.toast('Change the account in the app itself: its account menu (your initials)')
-        return
-      }
-      await $.command.run({ command: 'login' })
-    }
 
     return (
       <Box>
@@ -104,7 +95,6 @@ export const register: Register = on => {
             </Text>
           </Text>
         ))}
-        <Button key="switch" label="Switch account" onPress={switchAccount} />
       </Box>
     )
   })

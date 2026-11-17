@@ -1,0 +1,6 @@
+{
+  "name": "usage-flag",
+  "version": "0.1.0",
+  "description": "A flag above the prompt: how much of the 5-hour session and the week is used, when each ends, and a button to switch account",
+  "types": "./types/index.d.ts"
+}

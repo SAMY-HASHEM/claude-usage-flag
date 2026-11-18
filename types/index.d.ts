@@ -4,6 +4,9 @@ export type Limit = { kind: string; percentUsed: number; resetsAt?: string }
 /** The signed-in account as its login record names it. */
 export type Account = { name?: string; email?: string }
 
+/** An account the plugin has seen signed in, with the windows it last showed and when (epoch ms). */
+export type Known = Account & { limits: Limit[]; seenAt: number }
+
 declare module 'claude-code' {
   interface PluginState {
     'usage-flag': {
@@ -15,6 +18,10 @@ declare module 'claude-code' {
       warned: string[]
       /** The signed-in account, read from Claude Code's config file; null until found. */
       account: Account | null
+      /** Every account seen signed in, the signed-in one first, as kept in `$.store` under `accounts`. */
+      known: Known[]
+      /** The email of an account just signed in whose usage no answer has measured yet; '' when none. */
+      awaiting: string
     }
   }
 }
